@@ -62,9 +62,21 @@ jobs:
 
           Write-Host "Secrets present; JWT_KEY length $($env:JWT_KEY.Length)."
 
-          $origins = @($env:CORS_ALLOWED_ORIGINS -split ',' |
-            ForEach-Object { $_.Trim() } |
+          # Accept comma-, semicolon- or newline-separated origins: pasting one
+          # per line into the GitHub secrets box is the natural thing to do, and
+          # the failure it caused otherwise is invisible until a browser call.
+          # The trailing slash is stripped for the same reason — an origin is
+          # scheme + host, and "https://x/" never matches what the browser sends.
+          $origins = @($env:CORS_ALLOWED_ORIGINS -split '[,;\s]+' |
+            ForEach-Object { $_.Trim().TrimEnd('/') } |
             Where-Object { $_ })
+
+          $bad = @($origins | Where-Object { $_ -notmatch '^https?://[^/]+$' })
+          if ($bad) {
+            throw "CORS_ALLOWED_ORIGINS contains entries that are not bare origins: $($bad -join ', ')"
+          }
+
+          Write-Host "CORS origins ($($origins.Count)): $($origins -join '  |  ')"
 
           $settings = [ordered]@{
             MongoDb = [ordered]@{
