@@ -98,6 +98,24 @@ jobs:
           $settings | ConvertTo-Json -Depth 5 |
             Set-Content ./publish/appsettings.Production.json -Encoding utf8
 
+      - name: Stamp web.config to force an app pool recycle
+        shell: pwsh
+        # The CORS policy and JWT parameters are built once at startup, so a
+        # changed appsettings.Production.json only takes effect after a restart.
+        # .NET compiles deterministically: when only a secret changes the DLL is
+        # byte-identical, WebDeploy skips it, and nothing recycles the app pool —
+        # the deploy reports success and the old origins stay live. ANCM watches
+        # web.config, so making it differ every run guarantees the restart.
+        env:
+          RUN_STAMP: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
+        run: |
+          $path = './publish/web.config'
+          $xml = Get-Content $path -Raw
+          $stamp = "  <!-- deploy $env:RUN_STAMP -->"
+          $xml = $xml -replace '(?=</configuration>)', "$stamp`n"
+          Set-Content $path $xml -Encoding utf8
+          Write-Host "Stamped web.config with $env:RUN_STAMP"
+
       - name: Deploy via WebDeploy
         uses: rasmusbuchholdt/simply-web-deploy@2.1.0
         with:
