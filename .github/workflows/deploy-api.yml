@@ -43,11 +43,24 @@ jobs:
           JWT_KEY: ${{ secrets.JWT_KEY }}
           CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
         run: |
-          foreach ($name in 'MONGODB_CONNECTION_STRING', 'JWT_KEY', 'CORS_ALLOWED_ORIGINS') {
-            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) {
-              throw "Missing repository secret: $name"
-            }
+          # Report every missing secret at once. Throwing on the first costs a
+          # full build-and-fail cycle per secret to discover the rest.
+          $missing = @('MONGODB_CONNECTION_STRING', 'JWT_KEY', 'CORS_ALLOWED_ORIGINS') |
+            Where-Object { -not (Get-Item "env:$_" -ErrorAction SilentlyContinue).Value }
+
+          if ($missing) {
+            throw "Missing repository secret(s): $($missing -join ', '). " +
+                  "Add them under Settings > Secrets and variables > Actions, as " +
+                  "Repository secrets — environment secrets and variables are not visible here."
           }
+
+          # Program.cs throws on a short key, which would deploy successfully and
+          # then fail at startup as an opaque 500.30. Catch it before shipping.
+          if ($env:JWT_KEY.Length -lt 32) {
+            throw "JWT_KEY must be at least 32 characters; got $($env:JWT_KEY.Length)."
+          }
+
+          Write-Host "Secrets present; JWT_KEY length $($env:JWT_KEY.Length)."
 
           $origins = @($env:CORS_ALLOWED_ORIGINS -split ',' |
             ForEach-Object { $_.Trim() } |
