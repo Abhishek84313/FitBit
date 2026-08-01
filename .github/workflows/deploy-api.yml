@@ -1,0 +1,82 @@
+name: Deploy API to MonsterASP.NET
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    # WebDeploy (msdeploy.exe) is Windows-only, so this cannot run on ubuntu.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore server/FitBit.Api/FitBit.Api.csproj
+
+      - name: Publish
+        # win-x86 matches MonsterASP's 32-bit app pool; --no-self-contained keeps
+        # the payload small because the .NET 10 runtime is already installed there.
+        run: >
+          dotnet publish server/FitBit.Api/FitBit.Api.csproj
+          --configuration Release
+          --output ./publish
+          --runtime win-x86
+          --no-self-contained
+
+      - name: Write appsettings.Production.json
+        shell: pwsh
+        # Secrets arrive through env rather than ${{ }} interpolation: a Mongo
+        # connection string contains characters PowerShell would otherwise parse.
+        env:
+          MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
+          CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
+        run: |
+          foreach ($name in 'MONGODB_CONNECTION_STRING', 'JWT_KEY', 'CORS_ALLOWED_ORIGINS') {
+            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) {
+              throw "Missing repository secret: $name"
+            }
+          }
+
+          $origins = @($env:CORS_ALLOWED_ORIGINS -split ',' |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ })
+
+          $settings = [ordered]@{
+            MongoDb = [ordered]@{
+              ConnectionString = $env:MONGODB_CONNECTION_STRING
+              DatabaseName     = 'Fitbit'
+              CollectionName   = 'FitnessTracker'
+            }
+            Jwt = [ordered]@{
+              Key           = $env:JWT_KEY
+              Issuer        = 'FitBit.Api'
+              Audience      = 'FitBit.Client'
+              ExpiryMinutes = 720
+            }
+            Cors = [ordered]@{
+              AllowedOrigins = $origins
+            }
+          }
+
+          $settings | ConvertTo-Json -Depth 5 |
+            Set-Content ./publish/appsettings.Production.json -Encoding utf8
+
+      - name: Deploy via WebDeploy
+        uses: rasmusbuchholdt/simply-web-deploy@2.1.0
+        with:
+          website-name: ${{ secrets.WEBSITE_NAME }}
+          server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
+          server-username: ${{ secrets.SERVER_USERNAME }}
+          server-password: ${{ secrets.SERVER_PASSWORD }}

@@ -7,6 +7,12 @@ obj/
 *.userprefs
 appsettings.Local.json
 appsettings.*.Local.json
+# Generated on the runner from GitHub secrets — never commit real credentials.
+appsettings.Production.json
+publish/
+
+# Vercel
+.vercel
 
 # Node / Vite
 node_modules/

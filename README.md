@@ -137,12 +137,61 @@ Invoke-RestMethod "$base/dev/seed" -Method Post -Headers @{ Authorization = "Bea
 - Hover targets span the full band height and keyboard `Tab` opens the same panel; a **Table** toggle exposes every value without hover.
 - Series colors (`#2a78d6` light / `#3987e5` dark) were validated against both surfaces, not eyeballed. Goal-status colors always ship with an icon and a text label, never color alone.
 
+## Deployment
+
+Three free tiers, one per layer:
+
+| Layer | Host | URL |
+|---|---|---|
+| SPA | Vercel | `https://<project>.vercel.app` |
+| API | MonsterASP.NET | `https://fitbit.runasp.net` |
+| Database | MongoDB Atlas M0 | `mongodb+srv://…` |
+
+`appsettings.json` carries **local development values only**. Production configuration is written on the CI runner into `appsettings.Production.json` from GitHub secrets and never enters the repository — the file is gitignored so a local copy cannot be committed by accident. `ASPNETCORE_ENVIRONMENT` is unset on MonsterASP, and ASP.NET Core defaults to `Production`, so that file is the one that loads.
+
+> `Urls` lives in `appsettings.Development.json`, not `appsettings.json`. Left at the root it would pin the app to `localhost:5099` under IIS, where the AspNetCore Module assigns the port — the site would bind a port nothing routes to and return 502.
+
+### 1 · MongoDB Atlas
+
+Create a free **M0** cluster, add a database user, and under **Network Access** allow `0.0.0.0/0` — MonsterASP does not publish a fixed egress IP, so an allowlist cannot be narrowed. Keep the database name `Fitbit`; the collection and its indexes are created at startup.
+
+### 2 · API on MonsterASP.NET
+
+In the hosting control panel: turn on **free Let's Encrypt SSL** (required — see below), then activate the **WebDeploy** account and copy its credentials.
+
+Add these under **Settings → Secrets and variables → Actions** in the GitHub repo:
+
+| Secret | Value |
+|---|---|
+| `WEBSITE_NAME` | `siteXXXX` from the panel |
+| `SERVER_COMPUTER_NAME` | `https://siteXXXX.siteasp.net:8172` |
+| `SERVER_USERNAME` | `siteXXXX` |
+| `SERVER_PASSWORD` | the WebDeploy password |
+| `MONGODB_CONNECTION_STRING` | the Atlas `mongodb+srv://…` string |
+| `JWT_KEY` | a fresh random string, **32+ characters** |
+| `CORS_ALLOWED_ORIGINS` | the Vercel origin, comma-separated for several |
+
+`.github/workflows/deploy-api.yml` then builds and deploys on every push to `main` that touches `server/`. It publishes `--runtime win-x86 --no-self-contained`, matching MonsterASP's 32-bit app pool and its preinstalled .NET 10 runtime.
+
+### 3 · SPA on Vercel
+
+Import the repo and set **Root Directory** to `client` (framework preset: Vite). Add one environment variable:
+
+```
+VITE_API_BASE_URL = https://fitbit.runasp.net/api
+```
+
+`vercel.json` rewrites non-asset paths to `index.html`, without which a deep link like `/activities` 404s before React Router ever mounts.
+
+**The API must be reachable over `https`.** A page served from `https://…vercel.app` cannot call `http://fitbit.runasp.net` — browsers block the mixed-content request, and it surfaces as a generic network error rather than anything that names the cause.
+
+Vercel gives each preview deployment its own hostname, so previews fail CORS unless that origin is added to `CORS_ALLOWED_ORIGINS` too.
+
 ## Security notes for production
 
-This is configured for local development. Before deploying:
+Handled by the deployment above: `Jwt:Key` and the connection string are injected from secrets, and `Cors:AllowedOrigins` is narrowed to the deployed frontend. Still outstanding:
 
-1. **Move `Jwt:Key` out of `appsettings.json`** into user-secrets, environment variables or a key vault, and generate a fresh one.
-2. **Enable MongoDB authentication** — the local server runs with `security` disabled.
-3. Re-enable HTTPS and `UseHttpsRedirection`, and set `RequireHttpsMetadata = true`.
-4. Narrow `Cors:AllowedOrigins` to the deployed frontend origin.
-5. The JWT is kept in `localStorage`, which is readable by any XSS. That is a deliberate trade for a local app — an httpOnly refresh cookie (with the attendant CORS-credentials, SameSite and CSRF work) is the right call once this is exposed.
+1. **Enable MongoDB authentication** — Atlas does this by default; a self-hosted server does not.
+2. Re-enable HTTPS and `UseHttpsRedirection`, and set `RequireHttpsMetadata = true`. TLS currently terminates at the host, and the app itself does not redirect.
+3. Atlas network access is open to `0.0.0.0/0` out of necessity. The database user's password is the only thing protecting it, so it should be long and unique.
+4. The JWT is kept in `localStorage`, which is readable by any XSS. That was a deliberate trade for a local app — now that it is exposed, an httpOnly refresh cookie (with the attendant CORS-credentials, SameSite and CSRF work) is the right call.
