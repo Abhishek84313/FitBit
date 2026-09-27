@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { errorMessage } from '../api/client';
 import ErrorBanner from '../components/ErrorBanner';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -29,7 +30,12 @@ export default function LoginPage() {
 
   return (
     <div className="auth-shell">
+      <ThemeToggle className="auth-theme-toggle" />
       <form className="card auth-card" onSubmit={submit}>
+        <div className="auth-brand">
+          <span className="brand-dot" aria-hidden="true" />
+          FitBit
+        </div>
         <h1>Welcome back</h1>
         <div className="card-sub">Sign in to pick up your training log.</div>
 

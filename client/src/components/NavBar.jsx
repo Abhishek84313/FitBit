@@ -1,5 +1,6 @@
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import ThemeToggle from './ThemeToggle';
 
 export default function NavBar() {
   const { user, logout } = useAuth();
@@ -20,7 +21,13 @@ export default function NavBar() {
 
         <div className="spacer" />
 
-        <span className="user-chip">{user?.displayName}</span>
+        <ThemeToggle />
+        {user?.displayName && (
+          <span className="user-chip">
+            <span className="avatar" aria-hidden="true">{user.displayName.charAt(0).toUpperCase()}</span>
+            {user.displayName}
+          </span>
+        )}
         <button type="button" className="btn btn-sm btn-ghost" onClick={logout}>
           Sign out
         </button>

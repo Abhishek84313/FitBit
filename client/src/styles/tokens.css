@@ -1,95 +1,107 @@
-/* Design tokens. Light is the base; dark is *selected*, not an automatic flip.
-   Dark is declared under both scopes so a future theme toggle wins in either
-   direction: the media query covers the OS setting, the [data-theme] scope
-   covers an explicit stamp, and the :not() guard lets a light stamp beat OS-dark.
+/* Design tokens.
+
+   index.html stamps data-theme="light" | "dark" on <html> before first paint
+   (from localStorage, falling back to the OS setting), and ThemeContext keeps it
+   in sync afterwards. Because the stamp is always present, each theme is a plain
+   attribute scope — no media query, so an explicit choice always wins over the
+   OS. The :root base doubles as the light theme in case the stamp ever fails.
 
    Chart colors validated with the dataviz palette validator:
-     light #2a78d6 on #fcfcfb  -> ALL CHECKS PASS
-     dark  #3987e5 on #1a1a19  -> ALL CHECKS PASS  */
+     light #2a78d6 on #ffffff -> ALL CHECKS PASS
+     dark  #3987e5 on #17181c -> ALL CHECKS PASS  */
 
-:root {
+:root,
+:root[data-theme='light'] {
   color-scheme: light;
 
-  --page: #f9f9f7;
-  --surface-1: #fcfcfb;
+  /* Page gets a very soft warm-neutral wash so white cards lift off it */
+  --page: #f4f5f7;
+  --page-accent: rgba(42, 120, 214, 0.06);
+  --surface-1: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-raised: #ffffff;
 
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --text-muted: #898781;
+  --text-primary: #15171c;
+  --text-secondary: #545a66;
+  --text-muted: #838996;
+  --text-on-accent: #ffffff;
 
-  --grid: #e1e0d9;
-  --baseline: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
-  --wash: rgba(11, 11, 11, 0.04);
+  --grid: #e5e7eb;
+  --baseline: #c5c9d1;
+  --border: rgba(21, 23, 28, 0.1);
+  --border-strong: rgba(21, 23, 28, 0.18);
+  --wash: rgba(21, 23, 28, 0.045);
+  --wash-strong: rgba(21, 23, 28, 0.08);
 
   /* Single categorical slot: chart columns + meter fill */
   --series-1: #2a78d6;
+  --series-1-hover: #2467bb;
+  --series-1-soft: rgba(42, 120, 214, 0.1);
   /* Meter track is a lighter step of the SAME blue ramp (step 100), not gray,
      so the state reads across the whole bar. */
-  --track: #cde2fb;
-  --series-1-hover: #256abf;
+  --track: #d5e5fb;
 
-  /* Status — fixed, never themed. Always shipped with an icon + text label. */
-  --good: #0ca30c;
-  --warning: #fab219;
-  --serious: #ec835a;
-  --critical: #d03b3b;
-  --delta-up-good: #006300;
+  /* Status — fixed hues, never themed. Always shipped with an icon + text label. */
+  --good: #0a8a26;
+  --good-soft: rgba(10, 138, 38, 0.1);
+  --warning: #b07500;
+  --warning-soft: rgba(176, 117, 0, 0.12);
+  --serious: #c2571f;
+  --critical: #cf3535;
+  --critical-soft: rgba(207, 53, 53, 0.09);
+  --delta-up-good: #0a7a22;
 
-  --radius: 10px;
-  --radius-sm: 6px;
+  --radius-lg: 16px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
   --gap: 16px;
 
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --shadow-sm: 0 1px 2px rgba(21, 23, 28, 0.06);
+  --shadow: 0 1px 2px rgba(21, 23, 28, 0.05), 0 4px 12px -4px rgba(21, 23, 28, 0.08);
+  --shadow-lg: 0 12px 32px -8px rgba(21, 23, 28, 0.18), 0 2px 6px rgba(21, 23, 28, 0.06);
+  --ring: 0 0 0 3px rgba(42, 120, 214, 0.28);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-
-    --page: #0d0d0d;
-    --surface-1: #1a1a19;
-
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-
-    --grid: #2c2c2a;
-    --baseline: #383835;
-    --border: rgba(255, 255, 255, 0.1);
-    --wash: rgba(255, 255, 255, 0.06);
-
-    --series-1: #3987e5;
-    --track: #184f95;
-    --series-1-hover: #5598e7;
-
-    --delta-up-good: #0ca30c;
-
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  }
-}
-
-:root[data-theme="dark"] {
+:root[data-theme='dark'] {
   color-scheme: dark;
 
-  --page: #0d0d0d;
-  --surface-1: #1a1a19;
+  --page: #0e0f13;
+  --page-accent: rgba(57, 135, 229, 0.08);
+  --surface-1: #17181c;
+  --surface-2: #1e1f25;
+  --surface-raised: #1c1d22;
 
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
+  --text-primary: #f4f5f7;
+  --text-secondary: #b3b8c4;
+  --text-muted: #868c99;
+  --text-on-accent: #ffffff;
 
-  --grid: #2c2c2a;
-  --baseline: #383835;
+  --grid: #2a2c33;
+  --baseline: #3a3d46;
   --border: rgba(255, 255, 255, 0.1);
-  --wash: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --wash: rgba(255, 255, 255, 0.055);
+  --wash-strong: rgba(255, 255, 255, 0.1);
 
   --series-1: #3987e5;
-  --track: #184f95;
-  --series-1-hover: #5598e7;
+  --series-1-hover: #5b9dea;
+  --series-1-soft: rgba(57, 135, 229, 0.16);
+  --track: #1d4778;
 
-  --delta-up-good: #0ca30c;
+  --good: #35c04c;
+  --good-soft: rgba(53, 192, 76, 0.16);
+  --warning: #f0b429;
+  --warning-soft: rgba(240, 180, 41, 0.16);
+  --serious: #ec835a;
+  --critical: #f06a6a;
+  --critical-soft: rgba(240, 106, 106, 0.14);
+  --delta-up-good: #35c04c;
 
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 14px 36px -10px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --ring: 0 0 0 3px rgba(57, 135, 229, 0.38);
 }

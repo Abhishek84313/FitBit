@@ -4,7 +4,7 @@ import { formatKeyLong } from '../utils/date';
 
 export default function GoalCard({ goal, onDelete, pendingDeleteId }) {
   return (
-    <div className="card">
+    <div className="card card-interactive">
       <div className="goal-head">
         <div>
           <h3>{goal.title}</h3>

@@ -15,11 +15,22 @@ body,
 body {
   margin: 0;
   background: var(--page);
+  /* A single very soft accent wash at the top of the page, so the appbar and the
+     first row of cards sit on something rather than on flat gray. It is fixed so
+     it does not travel with the scroll. */
+  background-image: radial-gradient(
+    ellipse 1200px 420px at 50% -120px,
+    var(--page-accent),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1,
@@ -33,12 +44,13 @@ figure {
 h1 {
   font-size: 1.5rem;
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 h2 {
   font-size: 1.0625rem;
   font-weight: 620;
+  letter-spacing: -0.01em;
 }
 
 h3 {
@@ -48,6 +60,14 @@ h3 {
 
 a {
   color: var(--series-1);
+  text-decoration-color: color-mix(in srgb, var(--series-1) 40%, transparent);
+  text-underline-offset: 2px;
+  transition: color 0.14s ease;
+}
+
+a:hover {
+  color: var(--series-1-hover);
+  text-decoration-color: currentColor;
 }
 
 button,
@@ -61,7 +81,7 @@ textarea {
 :focus-visible {
   outline: 2px solid var(--series-1);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
 }
 
 /* Layout primitives */
@@ -69,7 +89,16 @@ textarea {
 .page {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 20px 64px;
+  padding: 28px 20px 64px;
+  /* Content arrives with a short, subtle rise rather than appearing hard */
+  animation: page-in 0.24s ease-out both;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 .page-head {
@@ -78,13 +107,13 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .page-head p {
   color: var(--text-secondary);
   font-size: 0.875rem;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .stack {
@@ -130,8 +159,27 @@ textarea {
   max-width: 100%;
 }
 
+/* Section eyebrow — small uppercase label above a group of cards */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
 @media (max-width: 640px) {
   .page {
-    padding: 16px 14px 48px;
+    padding: 18px 14px 48px;
+  }
+
+  h1 {
+    font-size: 1.3125rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    animation: none;
   }
 }

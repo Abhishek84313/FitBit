@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { errorMessage } from '../api/client';
 import ErrorBanner from '../components/ErrorBanner';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -29,7 +30,12 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-shell">
+      <ThemeToggle className="auth-theme-toggle" />
       <form className="card auth-card" onSubmit={submit}>
+        <div className="auth-brand">
+          <span className="brand-dot" aria-hidden="true" />
+          FitBit
+        </div>
         <h1>Create your account</h1>
         <div className="card-sub">Start logging activities and tracking goals.</div>
 
